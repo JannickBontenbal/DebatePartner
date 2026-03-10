@@ -1,16 +1,21 @@
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514';
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_MODEL = 'gpt-4o-mini';
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODEL = 'openrouter/free';
 const FREE_LLM_API_URL = 'https://apifreellm.com/api/v1/chat';
-const FREE_LLM_MODEL = 'gpt-4o-mini';
-const NETLIFY_PROXY_URL = '/.netlify/functions/ai';
+const LOCAL_PROXY_URL = '/api/dev-llm';
+const PROD_PROXY_URL = process.env.REACT_APP_AI_PROXY_URL || '/api/ai.php';
+
+function buildPrompt(system, messages) {
+  const lines = [];
+  if (system) lines.push(`System:\n${system}`);
+  for (const msg of messages || []) {
+    const role = msg?.role || 'user';
+    const content = msg?.content || '';
+    lines.push(`${role}:\n${content}`);
+  }
+  return lines.join('\n\n');
+}
 
 /**
- * Sends a request to FreeLLM (preferred), OpenAI, or Anthropic based on env key presence.
- * Supports REACT_APP_FREE_LLM_API_KEY, REACT_APP_OPENAI_API_KEY, or REACT_APP_ANTHROPIC_API_KEY in .env.
+ * Sends a request via backend proxy first, then falls back to direct provider mode for local development.
+ * Supports REACT_APP_AI_PROXY_URL and REACT_APP_FREE_LLM_API_KEY in .env.
  *
  * @param {object} opts
  * @param {string}   opts.system   - System prompt
@@ -19,40 +24,47 @@ const NETLIFY_PROXY_URL = '/.netlify/functions/ai';
  * @returns {Promise<string>} - The assistant's text response
  */
 export async function callClaude({ system, messages, maxTokens = 400 }) {
-  const proxyEnabled = process.env.REACT_APP_DISABLE_PROXY !== 'true';
+  const isLocalhost =
+    typeof window !== 'undefined' &&
+    ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const proxyEnabled = isLocalhost
+    ? true
+    : process.env.REACT_APP_DISABLE_PROXY !== 'true';
   const freeLlmKey = process.env.REACT_APP_FREE_LLM_API_KEY;
-  const openRouterKey = process.env.REACT_APP_OPENROUTER_API_KEY;
-  const openAiKey = process.env.REACT_APP_OPENAI_API_KEY;
-  const anthropicKey = process.env.REACT_APP_ANTHROPIC_API_KEY;
   const freeLlmUrl = process.env.REACT_APP_FREE_LLM_API_URL || FREE_LLM_API_URL;
+  const prompt = buildPrompt(system, messages);
 
   if (proxyEnabled) {
-    const proxyRes = await fetch(NETLIFY_PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system, messages, maxTokens }),
-    });
+    const proxyUrl = isLocalhost ? LOCAL_PROXY_URL : PROD_PROXY_URL;
+    try {
+      const proxyRes = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system, messages, maxTokens }),
+      });
 
-    if (proxyRes.ok) {
-      const proxyData = await proxyRes.json().catch(() => ({}));
-      const text = proxyData?.text || '';
-      if (!text) throw new Error('AI returned an empty response.');
-      return text;
+      if (proxyRes.ok) {
+        const contentType = proxyRes.headers.get('content-type') || '';
+        if (contentType.toLowerCase().includes('application/json')) {
+          const proxyData = await proxyRes.json().catch(() => ({}));
+          const text = proxyData?.text || '';
+          if (text) return text;
+        }
+        if (!isLocalhost) throw new Error('AI returned an empty response.');
+      } else {
+        // Local `npm start` usually has no backend proxy route; allow direct-provider fallback.
+        if (proxyRes.status !== 404 || !isLocalhost) {
+          const err = await proxyRes.json().catch(() => ({}));
+          throw new Error(err?.error || err?.message || `Proxy error ${proxyRes.status}`);
+        }
+      }
+    } catch (err) {
+      if (!isLocalhost) throw err;
     }
 
-    // Local `npm start` usually has no Netlify function route; allow direct-provider fallback.
-    if (proxyRes.status !== 404) {
-      const err = await proxyRes.json().catch(() => ({}));
-      throw new Error(err?.error || err?.message || `Proxy error ${proxyRes.status}`);
-    }
   }
 
   if (freeLlmKey) {
-    const freeLlmMessages = [
-      ...(system ? [{ role: 'system', content: system }] : []),
-      ...messages,
-    ];
-
     const res = await fetch(freeLlmUrl, {
       method: 'POST',
       headers: {
@@ -60,9 +72,7 @@ export async function callClaude({ system, messages, maxTokens = 400 }) {
         Authorization: `Bearer ${freeLlmKey}`,
       },
       body: JSON.stringify({
-        model: FREE_LLM_MODEL,
-        messages: freeLlmMessages,
-        max_tokens: maxTokens,
+        message: prompt,
       }),
     });
 
@@ -72,96 +82,10 @@ export async function callClaude({ system, messages, maxTokens = 400 }) {
     }
 
     const data = await res.json();
-    return (
-      data?.choices?.[0]?.message?.content ||
-      data?.message?.content ||
-      data?.response ||
-      data?.text ||
-      ''
-    );
-  }
-
-  if (openRouterKey) {
-    const openRouterMessages = [
-      ...(system ? [{ role: 'system', content: system }] : []),
-      ...messages,
-    ];
-
-    const res = await fetch(OPENROUTER_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${openRouterKey}`,
-      },
-      body: JSON.stringify({
-        model: OPENROUTER_MODEL,
-        messages: openRouterMessages,
-        max_tokens: maxTokens,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `API error ${res.status}`);
-    }
-
-    const data = await res.json();
-    return data?.choices?.[0]?.message?.content || '';
-  }
-
-  if (openAiKey) {
-    const openAiMessages = [
-      ...(system ? [{ role: 'system', content: system }] : []),
-      ...messages,
-    ];
-
-    const res = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${openAiKey}`,
-      },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        messages: openAiMessages,
-        max_tokens: maxTokens,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `API error ${res.status}`);
-    }
-
-    const data = await res.json();
-    return data?.choices?.[0]?.message?.content || '';
-  }
-
-  if (anthropicKey) {
-    const res = await fetch(ANTHROPIC_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicKey,
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: maxTokens,
-        system,
-        messages,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `API error ${res.status}`);
-    }
-
-    const data = await res.json();
-    return (data.content || []).map((b) => b.text || '').join('');
+    return data?.response || data?.text || '';
   }
 
   throw new Error(
-    'Missing API key. Set Netlify function env vars, or set REACT_APP_FREE_LLM_API_KEY / REACT_APP_OPENROUTER_API_KEY / REACT_APP_OPENAI_API_KEY / REACT_APP_ANTHROPIC_API_KEY for direct mode.',
+    'Missing API key. Set backend FREE_LLM_API_KEY or set REACT_APP_FREE_LLM_API_KEY for direct mode.',
   );
 }

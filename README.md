@@ -154,6 +154,40 @@ Do not use `REACT_APP_*` secrets for production deploys unless you intentionally
 
 ---
 
+## free-hosting.org deployment
+
+This repo includes a PHP proxy at `api/ai.php` for hosts that support PHP.
+
+1. Build locally:
+   - `npm run build`
+2. Upload contents of `build/` to `public_html/`
+3. Create folder `public_html/api/`
+4. Upload these files into `public_html/api/`:
+   - `api/ai.php`
+   - `api/.htaccess`
+   - `api/config.php`
+5. Open your domain and test.
+
+The frontend calls `/api/ai.php` by default via `REACT_APP_AI_PROXY_URL`.
+
+If your host has no environment variable feature:
+
+1. Copy `api/config.example.php` to `api/config.php`
+2. Put your real `FREE_LLM_API_KEY` in that file
+3. Upload `api/config.php` with `api/ai.php`
+
+If your host is cPanel File Manager only:
+
+1. In File Manager open `public_html`
+2. Upload a ZIP of the local `build` contents and extract into `public_html`
+3. Upload a ZIP with the local `api` folder and extract into `public_html/api`
+4. Confirm these URLs:
+   - `/index.html` loads
+   - `/api/ai.php` returns `Method not allowed` on GET (expected)
+5. Test app UI.
+
+---
+
 ## License
 
 MIT
