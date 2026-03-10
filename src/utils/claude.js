@@ -68,18 +68,16 @@ export async function callClaude({ system, messages, maxTokens = 400 }) {
           const text = proxyData?.text || '';
           if (text) return text;
         }
-        if (!isLocalhost) throw new Error('AI returned an empty response.');
+        throw new Error('AI returned an empty response.');
       } else {
-        // Local `npm start` usually has no backend proxy route; allow direct-provider fallback.
-        if (proxyRes.status !== 404 || !isLocalhost) {
-          const err = await proxyRes.json().catch(() => ({}));
-          throw new Error(err?.error || err?.message || `Proxy error ${proxyRes.status}`);
-        }
+        const err = await proxyRes.json().catch(() => ({}));
+        if (proxyRes.status === 429) throw new Error('Rate limited: wait ~30s and try again.');
+        throw new Error(err?.error || err?.message || `Proxy error ${proxyRes.status}`);
       }
     } catch (err) {
-      if (!isLocalhost) throw err;
+      // Never fall back to direct browser calls; they will hit CORS.
+      throw err;
     }
-
   }
 
   if (freeLlmKey) {

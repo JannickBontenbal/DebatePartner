@@ -21,23 +21,63 @@ module.exports = function setup(app) {
       const bodyKey = (req.body && req.body.apiKey) || '';
       const bodyUrl = (req.body && req.body.apiUrl) || '';
       const apiKey = bodyKey || defaultKey;
-      const apiUrl = bodyUrl || 'https://apifreellm.com/api/v1/chat';
+      const apiUrl = (bodyUrl || 'https://apifreellm.com/api/v1/chat').trim();
 
-      if (!apiKey) return res.status(400).json({ error: 'Missing FREE_LLM_API_KEY' });
+      if (!apiKey) return res.status(400).json({ error: 'Missing API key' });
 
       const { system = '', messages = [], maxTokens = 400 } = req.body || {};
       const prompt = buildPrompt(system, messages);
 
-      const upstream = await fetch(apiUrl, {
+      const isOpenAI = apiUrl.includes('openai.com');
+      const isOpenRouter = apiUrl.includes('openrouter.ai');
+      const isAnthropic = apiUrl.includes('anthropic.com');
+
+      let targetUrl = apiUrl;
+      const headers = { 'Content-Type': 'application/json' };
+      const modelFromReq = req.body?.model;
+      let body;
+
+      if (isOpenAI || isOpenRouter) {
+        targetUrl = apiUrl.endsWith('/')
+          ? `${apiUrl}chat/completions`
+          : `${apiUrl}/chat/completions`;
+        headers.Authorization = `Bearer ${apiKey}`;
+        body = {
+          model: modelFromReq || 'gpt-4o-mini',
+          messages: [
+            ...(system ? [{ role: 'system', content: system }] : []),
+            ...(messages || []),
+          ],
+          max_tokens: maxTokens,
+        };
+      } else if (isAnthropic) {
+        targetUrl = apiUrl.endsWith('/')
+          ? `${apiUrl}messages`
+          : `${apiUrl}/messages`;
+        headers['x-api-key'] = apiKey;
+        headers['anthropic-version'] = '2023-06-01';
+        body = {
+          model: modelFromReq || 'claude-3-haiku-20240307',
+          max_tokens: maxTokens,
+          system,
+          messages,
+        };
+      } else {
+        headers.Authorization = `Bearer ${apiKey}`;
+        body = { message: prompt, max_tokens: maxTokens };
+      }
+
+      const upstream = await fetch(targetUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({ message: prompt, max_tokens: maxTokens }),
+        headers,
+        body: JSON.stringify(body),
       });
 
       const data = await upstream.json().catch(() => ({}));
+
+      if (upstream.status === 429) {
+        return res.status(429).json({ error: 'Rate limited by upstream. Wait ~30 seconds and retry.' });
+      }
 
       if (!upstream.ok || data?.success === false) {
         return res

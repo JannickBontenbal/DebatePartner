@@ -36,6 +36,11 @@ npm start
 
 How AI calls work locally:
 - Frontend hits `/api/dev-llm` handled by `src/setupProxy.js` (server-side fetch with your key).
+- Supported providers (auto-detected by URL):
+  - ApiFreeLLM (`message` payload)
+  - OpenAI (`/chat/completions`)
+  - OpenRouter (`/chat/completions`)
+  - Anthropic (`/v1/messages`)
 - No CORS issues; key never leaves the dev server in responses.
 
 Port in use? `PORT=3001 npm start` or close the other process.
@@ -52,7 +57,7 @@ This repo includes `api/ai.php` so you can host on a basic PHP/shared host.
    - `api/ai.php`
    - `api/.htaccess`
    - `api/config.php` (copy from `config.example.php` and put your real key; never commit it)
-4) Visit your domain; `/api/ai.php` should return “Method not allowed” on GET (expected).
+4) Visit your domain; `/api/ai.php` should return "Method not allowed" on GET (expected).
 
 No env vars on the host? Use `api/config.php` as above.
 
@@ -98,6 +103,7 @@ netlify/functions/ai.js   # Netlify serverless proxy
 - Quick topics & colors: `src/utils/constants.js`
 - API endpoint/model: `src/utils/claude.js`
 - PHP proxy target: `api/ai.php`
+- API Settings modal: opens automatically on first run (or via the “API Settings” button) to set key/endpoint.
 
 ---
 

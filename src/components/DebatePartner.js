@@ -158,8 +158,8 @@ export default function DebatePartner() {
         fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: '#bbb', letterSpacing: 2, textTransform: 'uppercase',
         flexShrink: 0,
       }}>
-        <span>Debate Partner Â© 2026</span>
-        <span>Powered by Claude</span>
+        <span>Debate Partner © 2026</span>
+        <span>Made by Jannick Bontenbal</span>
       </footer>
 
       <ApiConfigModal

@@ -163,7 +163,7 @@ export default function ApiConfigModal({ open, onClose, onSaved }) {
             onClick={onClose}
             style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}
           >
-            Cancel
+            Exit
           </button>
           <button
             onClick={handleSave}
