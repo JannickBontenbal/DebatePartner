@@ -2,6 +2,17 @@ const FREE_LLM_API_URL = 'https://apifreellm.com/api/v1/chat';
 const LOCAL_PROXY_URL = '/api/dev-llm';
 const PROD_PROXY_URL = process.env.REACT_APP_AI_PROXY_URL || '/api/ai.php';
 
+function getUserConfig() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const apiKey = window.localStorage.getItem('dp_api_key') || '';
+    const apiUrl = window.localStorage.getItem('dp_api_url') || '';
+    return { apiKey, apiUrl };
+  } catch (_) {
+    return {};
+  }
+}
+
 function buildPrompt(system, messages) {
   const lines = [];
   if (system) lines.push(`System:\n${system}`);
@@ -30,8 +41,9 @@ export async function callClaude({ system, messages, maxTokens = 400 }) {
   const proxyEnabled = isLocalhost
     ? true
     : process.env.REACT_APP_DISABLE_PROXY !== 'true';
-  const freeLlmKey = process.env.REACT_APP_FREE_LLM_API_KEY;
-  const freeLlmUrl = process.env.REACT_APP_FREE_LLM_API_URL || FREE_LLM_API_URL;
+  const { apiKey: storedKey, apiUrl: storedUrl } = getUserConfig();
+  const freeLlmKey = storedKey || process.env.REACT_APP_FREE_LLM_API_KEY;
+  const freeLlmUrl = storedUrl || process.env.REACT_APP_FREE_LLM_API_URL || FREE_LLM_API_URL;
   const prompt = buildPrompt(system, messages);
 
   if (proxyEnabled) {
@@ -40,7 +52,13 @@ export async function callClaude({ system, messages, maxTokens = 400 }) {
       const proxyRes = await fetch(proxyUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system, messages, maxTokens }),
+        body: JSON.stringify({
+          system,
+          messages,
+          maxTokens,
+          apiKey: storedKey,
+          apiUrl: storedUrl,
+        }),
       });
 
       if (proxyRes.ok) {

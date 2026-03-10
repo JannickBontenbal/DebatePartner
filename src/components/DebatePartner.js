@@ -5,9 +5,26 @@ import Marquee            from './Marquee';
 import SetupStage         from './SetupStage';
 import ChooseSideStage    from './ChooseSideStage';
 import DebateStage        from './DebateStage';
+import ApiConfigModal     from './ApiConfigModal';
+import { useEffect, useState } from 'react';
 
 export default function DebatePartner() {
   const debate = useDebate();
+  const [showApiModal, setShowApiModal] = useState(false);
+
+  useEffect(() => {
+    try {
+      const hasKey = window.localStorage.getItem('dp_api_key');
+      const envKey = process.env.REACT_APP_FREE_LLM_API_KEY || '';
+      if (!hasKey && !envKey) setShowApiModal(true);
+    } catch (_) {
+      setShowApiModal(true);
+    }
+  }, []);
+
+  const handleSaved = () => {
+    // Refresh stage state if needed; no-op otherwise
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: COLORS.cream, color: COLORS.ink, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
@@ -54,6 +71,14 @@ export default function DebatePartner() {
         </div>
 
         <div style={{ textAlign: 'right', paddingTop: 8 }}>
+          <button
+            onClick={() => setShowApiModal(true)}
+            style={{ background: 'none', border: '1px solid #ddd', borderRadius: 14, padding: '8px 12px', fontFamily: "'DM Sans',sans-serif", fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: '#555', cursor: 'pointer', marginBottom: 8 }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#FF3B00'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#555'; }}
+          >
+            API Settings
+          </button>
           {debate.stage !== STAGES.SETUP && (
             <button
               onClick={debate.reset}
@@ -136,6 +161,12 @@ export default function DebatePartner() {
         <span>Debate Partner © 2026</span>
         <span>Powered by Claude</span>
       </footer>
+
+      <ApiConfigModal
+        open={showApiModal}
+        onClose={() => setShowApiModal(false)}
+        onSaved={handleSaved}
+      />
 
     </div>
   );
