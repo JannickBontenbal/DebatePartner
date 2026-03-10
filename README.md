@@ -14,7 +14,7 @@ An open, AI-powered debate partner to practice arguments and get quick verdicts.
 Prereqs: Node 18+ and npm.
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/JannickBontenbal/DebatePartner
 cd debate-app
 npm install
 npm start   # opens http://localhost:3000
