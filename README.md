@@ -17,21 +17,18 @@ Prereqs: Node 18+ and npm.
 git clone <your-repo-url>
 cd debate-app
 npm install
-cp .env.example .env
+npm start   # opens http://localhost:3000
 ```
 
-Edit `.env` (required):
+First run:
+- The **API Settings** modal opens automatically.
+- Paste your API key and endpoint, click **Save & Verify** (this stores in `localStorage` and overrides any `.env`).
+
+Optional `.env` (only if you prefer defaults or CI):
 ```
-REACT_APP_FREE_LLM_API_KEY=apf_your_key_here
-# optional: REACT_APP_FREE_LLM_API_URL=https://apifreellm.com/api/v1/chat
-# leave proxy enabled (recommended for localhost)
+REACT_APP_FREE_LLM_API_KEY=
+REACT_APP_FREE_LLM_API_URL=https://apifreellm.com/api/v1/chat
 # REACT_APP_DISABLE_PROXY=false
-```
-
-Run:
-```bash
-npm start
-# http://localhost:3000
 ```
 
 How AI calls work locally:
@@ -103,7 +100,7 @@ netlify/functions/ai.js   # Netlify serverless proxy
 - Quick topics & colors: `src/utils/constants.js`
 - API endpoint/model: `src/utils/claude.js`
 - PHP proxy target: `api/ai.php`
-- API Settings modal: opens automatically on first run (or via the “API Settings” button) to set key/endpoint.
+- API Settings modal: opens automatically on first run (or via the “API Settings” button) to set key/endpoint; values stored in `localStorage` take priority over `.env`.
 
 ---
 
