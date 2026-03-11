@@ -17,7 +17,6 @@ An open, AI-powered debate partner to practice arguments and get quick verdicts.
 
   ![API Settings](docs/screenshots/api-settings.svg)
 
-  Replace the placeholder `.svg` files in `docs/screenshots/` with real PNG/JPG screenshots (keep the same filenames) and GitHub will render them here.
 </details>
 
 ---
