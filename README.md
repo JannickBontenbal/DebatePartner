@@ -11,11 +11,11 @@ An open, AI-powered debate partner to practice arguments and get quick verdicts.
 <details>
   <summary>Click to expand</summary>
 
-  ![Home](docs/screenshots/home.svg)
+  ![Screenshot - landing](docs/screenshots/Schermafbeelding%202026-03-11%20115652.png)
 
-  ![Debate](docs/screenshots/debate.svg)
+  ![Screenshot - debate flow](docs/screenshots/Schermafbeelding%202026-03-11%20115804.png)
 
-  ![API Settings](docs/screenshots/api-settings.svg)
+  ![Screenshot - API settings](docs/screenshots/Schermafbeelding%202026-03-11%20120118.png)
 
 </details>
 
