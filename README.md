@@ -15,7 +15,7 @@ Prereqs: Node 18+ and npm.
 
 ```bash
 git clone https://github.com/JannickBontenbal/DebatePartner
-cd debate-app
+cd DebatePartner
 npm install
 npm start   # opens http://localhost:3000
 ```
@@ -113,4 +113,4 @@ netlify/functions/ai.js   # Netlify serverless proxy
 
 ## License
 
-MIT
+This project is licensed under **CC BY-NC 4.0** — remix and improve non-commercially, with attribution to **Jannick Bontenbal**. See `LICENSE`.
