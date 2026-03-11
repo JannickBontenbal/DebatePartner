@@ -86,7 +86,7 @@ export default function DebatePartner() {
               onMouseEnter={(e) => { e.currentTarget.style.color = '#FF3B00'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#aaa'; }}
             >
-              ← New Debate
+              {'\u2190 New Debate'}
             </button>
           )}
           <div style={{ fontFamily: "'DM Serif Display',serif", fontStyle: 'italic', fontSize: 13, color: '#bbb' }}>
@@ -144,6 +144,8 @@ export default function DebatePartner() {
             onSend={debate.sendArgument}
             onVerdict={debate.requestVerdict}
             onReset={debate.reset}
+            onRegenerateVerdict={debate.regenerateVerdict}
+            onRegenerateAi={debate.regenerateAiMessage}
           />
         )}
       </main>
@@ -158,7 +160,7 @@ export default function DebatePartner() {
         fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: '#bbb', letterSpacing: 2, textTransform: 'uppercase',
         flexShrink: 0,
       }}>
-        <span>Debate Partner � 2026</span>
+        <span>Debate Partner © 2026</span>
         <span>Made by Jannick Bontenbal</span>
       </footer>
 

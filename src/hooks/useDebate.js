@@ -92,27 +92,82 @@ export function useDebate() {
     }
   }
 
+  function buildTranscript(sourceMessages) {
+    const trimmed = sourceMessages.slice(-12);
+    return trimmed
+      .map((m) => `[${m.role === 'user' ? userSide : aiSide}]: ${m.text}`)
+      .join('\n')
+      .slice(-3000);
+  }
+
+  async function runVerdict(transcript) {
+    return callClaude({
+      system:
+        'You are an impartial debate judge. Give a structured verdict: who won and why, ' +
+        'then specific feedback for each side. Be fair but honest.',
+      messages: [{
+        role: 'user',
+        content: `Motion: "${topicDisplay}"\n\nTranscript:\n${transcript}\n\nGive your verdict.`,
+      }],
+      maxTokens: 480,
+    });
+  }
+
   /* ── Request verdict ── */
   async function requestVerdict() {
     if (loading) return;
     setLoading(true);
-    const transcript = messages
-      .map((m) => `[${m.role === 'user' ? userSide : aiSide}]: ${m.text}`)
-      .join('\n');
+    const transcript = buildTranscript(messages);
     try {
-      const text = await callClaude({
-        system:
-          'You are an impartial debate judge. Give a structured verdict: who won and why, ' +
-          'then specific feedback for each side. Be fair but honest.',
-        messages: [{
-          role:    'user',
-          content: `Motion: "${topicDisplay}"\n\nTranscript:\n${transcript}\n\nGive your verdict.`,
-        }],
-        maxTokens: 550,
-      });
+      const text = await runVerdict(transcript).catch(async () => runVerdict(transcript));
       setMessages((m) => [...m, { role: 'judge', text }]);
     } catch (err) {
-      setMessages((m) => [...m, { role: 'judge', text: 'Could not retrieve verdict.' }]);
+      setMessages((m) => [...m, { role: 'judge', text: `Could not retrieve verdict. (${err.message || 'error'})` }]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ── Regenerate verdict ── */
+  async function regenerateVerdict() {
+    if (loading) return;
+    setLoading(true);
+    const nonJudge = messages.filter((m) => m.role !== 'judge');
+    const transcript = buildTranscript(nonJudge);
+    try {
+      const text = await runVerdict(transcript).catch(async () => runVerdict(transcript));
+      setMessages((m) => [...nonJudge, { role: 'judge', text }]);
+    } catch (err) {
+      setMessages((m) => [...messages, { role: 'judge', text: `Could not retrieve verdict. (${err.message || 'error'})` }]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ── Regenerate AI message (non-judge) ── */
+  async function regenerateAiMessage(index) {
+    const target = messages[index];
+    if (!target || target.role !== 'ai' || loading) return;
+    setLoading(true);
+    const history = messages.slice(0, index).map((m) => ({
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: m.text,
+    }));
+
+    const isOpening = index === 0;
+    const system = isOpening
+      ? `You are a razor-sharp debate opponent. Motion: "${topicDisplay}". You argue ${aiSide}. Open with a powerful 2-3 sentence statement. Be bold, direct, no pleasantries.`
+      : `You are a razor-sharp debate opponent. Motion: "${topicDisplay}". You argue ${aiSide}, the user argues ${userSide}. Attack their reasoning directly, give counter-evidence, advance your position. 2-4 sentences, incisive and confident.`;
+
+    try {
+      const text = await callClaude({
+        system,
+        messages: history,
+        maxTokens: isOpening ? 320 : 400,
+      });
+      setMessages((m) => m.map((msg, i) => (i === index ? { ...msg, text } : msg)));
+    } catch (err) {
+      setMessages((m) => m.map((msg, i) => (i === index ? { ...msg, text: `Regenerate failed: ${err.message || 'error'}` } : msg)));
     } finally {
       setLoading(false);
     }
@@ -136,6 +191,7 @@ export function useDebate() {
     userSide, aiSide, messages, input, setInput,
     loading, setupLoading, round,
     submitTopic, chooseSide, sendArgument, requestVerdict, reset,
+    regenerateVerdict, regenerateAiMessage,
     hasVerdict: messages.some((m) => m.role === 'judge'),
   };
 }

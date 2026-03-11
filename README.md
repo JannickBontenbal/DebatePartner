@@ -7,6 +7,19 @@ An open, AI-powered debate partner to practice arguments and get quick verdicts.
 - Skill building: fast back-and-forth debates plus a concise verdict.
 - Simple deploy: PHP proxy for static hosts, Netlify/Vercel friendly, localhost works without CORS.
 
+## Screenshots
+<details>
+  <summary>Click to expand</summary>
+
+  ![Home](docs/screenshots/home.svg)
+
+  ![Debate](docs/screenshots/debate.svg)
+
+  ![API Settings](docs/screenshots/api-settings.svg)
+
+  Replace the placeholder `.svg` files in `docs/screenshots/` with real PNG/JPG screenshots (keep the same filenames) and GitHub will render them here.
+</details>
+
 ---
 
 ## Local Development (localhost)

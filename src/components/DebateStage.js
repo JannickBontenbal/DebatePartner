@@ -1,7 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { SIDE_CONFIG, COLORS } from '../utils/constants';
 
-/* ── Typing indicator ── */
 function TypingDots() {
   return (
     <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
@@ -36,95 +35,89 @@ function TypingDots() {
   );
 }
 
-/* ── Single message bubble ── */
-function MessageBubble({ msg, userSide, aiSide }) {
-  if (msg.role === 'judge') {
-    return (
-      <div className="scale-in" style={{
-        background: '#FFFBEA',
-        border: '3px solid #FFD700',
-        padding: '26px 30px',
-        boxShadow: '6px 6px 0 rgba(255,215,0,0.28)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-          <div style={{
-            width: 36, height: 36, background: '#FFD700', border: '2px solid #0D0D0D',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, color: '#0D0D0D',
-            flexShrink: 0,
-          }}>⚖</div>
-          <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, letterSpacing: 3 }}>
-            JUDGE'S VERDICT
-          </div>
-        </div>
-        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 15, color: '#333', lineHeight: 1.8 }}>
-          {msg.text}
-        </div>
-      </div>
-    );
-  }
-
-  const isUser  = msg.role === 'user';
-  const cfg     = SIDE_CONFIG[msg.side];
-  const avatarBg    = isUser ? '#0D0D0D' : COLORS.cream;
+function MessageBubble({ msg, userSide, aiSide, onRegenerate }) {
+  const isJudge = msg.role === 'judge';
+  const isUser = msg.role === 'user';
+  const cfg = SIDE_CONFIG[msg.side];
+  const avatarBg = isUser ? '#0D0D0D' : COLORS.cream;
   const avatarColor = isUser ? '#F5F0E8' : '#0D0D0D';
-  const bubbleBg    = isUser ? '#0D0D0D' : COLORS.white;
-  const bubbleText  = isUser ? '#F5F0E8' : '#0D0D0D';
+  const bubbleBg = isJudge ? '#FFFBEA' : isUser ? '#0D0D0D' : COLORS.white;
+  const bubbleText = isJudge ? '#333' : isUser ? '#F5F0E8' : '#0D0D0D';
+  const borderColor = isJudge ? '#FFD700' : isUser ? '#0D0D0D' : cfg.color;
+  const shadow = isJudge ? '6px 6px 0 rgba(255,215,0,0.28)' : isUser ? '5px 5px 0 rgba(13,13,13,0.14)' : `5px 5px 0 ${cfg.color}33`;
 
   return (
     <div
       className={isUser ? 'msg-right' : 'msg-left'}
       style={{ display: 'flex', flexDirection: isUser ? 'row-reverse' : 'row', gap: 14, alignItems: 'flex-start' }}
     >
-      {/* Avatar */}
       <div style={{
         flexShrink: 0, width: 44, height: 44,
         background: avatarBg,
-        border: `3px solid ${cfg.color}`,
-        boxShadow: `3px 3px 0 ${cfg.color}`,
+        border: `3px solid ${borderColor}`,
+        boxShadow: `3px 3px 0 ${borderColor}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: "'Bebas Neue',sans-serif", fontSize: 13, color: avatarColor, letterSpacing: 1,
       }}>
-        {isUser ? 'YOU' : 'AI'}
+        {isUser ? 'YOU' : isJudge ? 'JUDGE' : 'AI'}
       </div>
 
-      {/* Bubble */}
       <div style={{
         maxWidth: '70%',
         background: bubbleBg,
-        border: `3px solid ${isUser ? '#0D0D0D' : cfg.color}`,
+        border: `3px solid ${borderColor}`,
         padding: '18px 22px',
-        boxShadow: isUser
-          ? '5px 5px 0 rgba(13,13,13,0.14)'
-          : `5px 5px 0 ${cfg.color}33`,
+        boxShadow: shadow,
       }}>
         <div style={{
           fontFamily: "'DM Sans',sans-serif", fontSize: 10, letterSpacing: 3,
-          color: cfg.color, textTransform: 'uppercase', marginBottom: 8, fontWeight: 600,
+          color: borderColor, textTransform: 'uppercase', marginBottom: 8, fontWeight: 600,
         }}>
-          {isUser ? `You · ${msg.side}` : `Opposition · ${msg.side}`}
+          {isJudge ? "Judge's Verdict" : isUser ? `You - ${msg.side}` : `Opposition - ${msg.side}`}
         </div>
         <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 15, color: bubbleText, lineHeight: 1.78 }}>
           {msg.text}
         </div>
+        {!isUser && onRegenerate && (
+          <button
+            onClick={onRegenerate}
+            style={{
+              marginTop: 10,
+              width: 32,
+              height: 32,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: isJudge ? '#FFFBEA' : '#fff',
+              border: `1px solid ${borderColor}`,
+              color: '#0D0D0D',
+              borderRadius: '50%',
+              fontFamily: "'DM Sans',sans-serif",
+              fontSize: 14,
+              cursor: 'pointer',
+              boxShadow: isJudge ? '3px 3px 0 rgba(255,215,0,0.2)' : `3px 3px 0 ${cfg.color}33`,
+            }}
+            title="Regenerate"
+            aria-label="Regenerate"
+          >
+            ↻
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-/* ── Main stage ── */
 export default function DebateStage({
   topicDisplay, userSide, aiSide, round,
   messages, input, setInput, loading, hasVerdict,
-  onSend, onVerdict, onReset,
+  onSend, onVerdict, onReset, onRegenerateVerdict, onRegenerateAi,
 }) {
   const bottomRef = useRef(null);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
 
   return (
     <div style={{ animation: 'fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both' }}>
-
-      {/* Scoreboard bar */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginBottom: 28, flexWrap: 'wrap', gap: 14,
@@ -149,7 +142,7 @@ export default function DebateStage({
             fontFamily: "'Bebas Neue',sans-serif", fontSize: 17, letterSpacing: 3,
             borderRight: '2px solid #0D0D0D',
           }}>
-            YOU · {userSide}
+            YOU - {userSide}
           </div>
           <div style={{
             padding: '10px 18px',
@@ -166,25 +159,37 @@ export default function DebateStage({
             color: '#fff',
             fontFamily: "'Bebas Neue',sans-serif", fontSize: 17, letterSpacing: 3,
           }}>
-            AI · {aiSide}
+            AI - {aiSide}
           </div>
         </div>
       </div>
 
-      {/* Message feed */}
       <div style={{
         maxHeight: '50vh', overflowY: 'auto',
         display: 'flex', flexDirection: 'column', gap: 18,
         marginBottom: 18, paddingRight: 4,
       }}>
-        {messages.map((msg, i) => (
-          <MessageBubble key={i} msg={msg} userSide={userSide} aiSide={aiSide} />
-        ))}
+        {messages.map((msg, i) => {
+          const regenHandler =
+            msg.role === 'judge'
+              ? onRegenerateVerdict
+              : msg.role === 'ai'
+              ? () => onRegenerateAi(i)
+              : undefined;
+          return (
+            <MessageBubble
+              key={i}
+              msg={msg}
+              userSide={userSide}
+              aiSide={aiSide}
+              onRegenerate={regenHandler}
+            />
+          );
+        })}
         {loading && !hasVerdict && <TypingDots />}
         <div ref={bottomRef} />
       </div>
 
-      {/* Input area */}
       {!hasVerdict ? (
         <div style={{ border: '3px solid #0D0D0D', background: COLORS.white, boxShadow: '6px 6px 0 #0D0D0D', overflow: 'hidden' }}>
           <div style={{
@@ -195,7 +200,7 @@ export default function DebateStage({
               fontFamily: "'Bebas Neue',sans-serif", fontSize: 13, letterSpacing: 3,
               color: userSide === 'FOR' ? '#2ECC71' : '#FF3B00',
             }}>
-              YOUR ARGUMENT · {userSide}
+              YOUR ARGUMENT - {userSide}
             </span>
             <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: '#666', letterSpacing: 1 }}>
               ↵ Enter to send
@@ -206,7 +211,7 @@ export default function DebateStage({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
-            placeholder="Make your case…"
+            placeholder="Make your case..."
             rows={4}
             disabled={loading}
             style={{
@@ -221,7 +226,6 @@ export default function DebateStage({
             display: 'flex', justifyContent: 'flex-end', gap: 10,
             padding: '12px 14px', background: '#F9F7F2', borderTop: '2px solid #0D0D0D',
           }}>
-            {/* Verdict button */}
             <button
               onClick={onVerdict}
               disabled={loading || messages.length < 4}
@@ -239,7 +243,6 @@ export default function DebateStage({
               ⚖ Verdict
             </button>
 
-            {/* Send button */}
             <button
               onClick={onSend}
               disabled={!input.trim() || loading}
@@ -254,7 +257,7 @@ export default function DebateStage({
               onMouseEnter={(e) => { if (input.trim() && !loading) { e.currentTarget.style.background = '#FF3B00'; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
               onMouseLeave={(e) => { e.currentTarget.style.background = input.trim() ? '#0D0D0D' : '#ddd'; e.currentTarget.style.transform = 'none'; }}
             >
-              {loading ? 'Waiting…' : 'Fire →'}
+              {loading ? 'Waiting...' : 'Fire →'}
             </button>
           </div>
         </div>
@@ -277,3 +280,6 @@ export default function DebateStage({
     </div>
   );
 }
+
+
+
